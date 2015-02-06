@@ -1,0 +1,49 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.31101.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SplHtmlMinifier", "SplHtmlMinifier\SplHtmlMinifier.csproj", "{F1B8B30D-E3B9-4EC7-ACDA-AA87FD9B9331}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SplHtmlMinifierMvc", "SplHtmlMinifierMvc\SplHtmlMinifierMvc.csproj", "{F6978030-9D01-4BD3-9848-3F3713337BF7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SplHtmlMinifierTests", "SplHtmlMinifierTests\SplHtmlMinifierTests.csproj", "{7FA78C37-9B4F-4894-809D-F99DFCB4FF12}"
+EndProject
+Global
+	GlobalSection(TeamFoundationVersionControl) = preSolution
+		SccNumberOfProjects = 4
+		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccTeamFoundationServer = http://spworks:8080/tfs/htmlparser
+		SccLocalPath0 = .
+		SccProjectUniqueName1 = SplHtmlMinifier\\SplHtmlMinifier.csproj
+		SccProjectName1 = SplHtmlMinifier
+		SccLocalPath1 = SplHtmlMinifier
+		SccProjectUniqueName2 = SplHtmlMinifierMvc\\SplHtmlMinifierMvc.csproj
+		SccProjectName2 = SplHtmlMinifierMvc
+		SccLocalPath2 = SplHtmlMinifierMvc
+		SccProjectUniqueName3 = SplHtmlMinifierTests\\SplHtmlMinifierTests.csproj
+		SccProjectName3 = SplHtmlMinifierTests
+		SccLocalPath3 = SplHtmlMinifierTests
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F1B8B30D-E3B9-4EC7-ACDA-AA87FD9B9331}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F1B8B30D-E3B9-4EC7-ACDA-AA87FD9B9331}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F1B8B30D-E3B9-4EC7-ACDA-AA87FD9B9331}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F1B8B30D-E3B9-4EC7-ACDA-AA87FD9B9331}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F6978030-9D01-4BD3-9848-3F3713337BF7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F6978030-9D01-4BD3-9848-3F3713337BF7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F6978030-9D01-4BD3-9848-3F3713337BF7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F6978030-9D01-4BD3-9848-3F3713337BF7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7FA78C37-9B4F-4894-809D-F99DFCB4FF12}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7FA78C37-9B4F-4894-809D-F99DFCB4FF12}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7FA78C37-9B4F-4894-809D-F99DFCB4FF12}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7FA78C37-9B4F-4894-809D-F99DFCB4FF12}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
