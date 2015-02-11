@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 
 namespace SplHtmlMinifier
@@ -9,155 +10,193 @@ namespace SplHtmlMinifier
 	{
 		static bool HasClassOrIdAttr(this IList<Attr> attrs)
 		{
-			foreach (var attr in attrs) {
-				if (attr.IsValid && (false
-					|| attr.Name.EqualsIgnoreCase("class")
-					|| attr.Name.EqualsIgnoreCase("id")
-					)) {
-					return true;
-				}
-			}
-			return false;
+			return attrs.Any(attr => attr.IsValid && (attr.Name.EqualsIgnoreCase("class") || attr.Name.EqualsIgnoreCase("id")));
 		}
-		class HtmlMinifierWkr : HtmlTokenizer.IWriter
+		class HtmlMinifierWorker : HtmlTokenizer.IWriter
 		{
-			Encoding encoding;
-			HtmlMinifierWkr(Encoding encoding)
+			readonly Encoding encoding;
+			HtmlMinifierWorker(Encoding encoding)
 			{
 				this.encoding = encoding;
 			}
-			public string Result { get; private set; }
+			string Result { get; set; }
 			#region Writer
 			enum WsType
 			{
 				Ortho = 0,
 				Needs,
 				Trimmed,
-				Gives,
+				Gives
 			}
-			StringBuilder rsltSB = new StringBuilder();
-			WsType rsltRightWst;
-			void Write(string textHtml, WsType leftWst, WsType rightWst)
+			StringBuilder wrSb = new StringBuilder();
+			WsType wrRightmostWst;
+			void WrWrite(string text, WsType leftWst, WsType rightWst)
 			{
 				if (leftWst == WsType.Ortho && rightWst == WsType.Ortho) {
-					rsltSB.Append(textHtml);
+					wrSb.Append(text);
 					return;
 				}
 				if (false
-					|| (rsltRightWst == WsType.Trimmed && (leftWst == WsType.Needs || leftWst == WsType.Trimmed))
-					|| (leftWst == WsType.Trimmed && (rsltRightWst == WsType.Needs || rsltRightWst == WsType.Trimmed))
+					|| (wrRightmostWst == WsType.Trimmed && (leftWst == WsType.Needs || leftWst == WsType.Trimmed))
+					|| (leftWst == WsType.Trimmed && (wrRightmostWst == WsType.Needs || wrRightmostWst == WsType.Trimmed))
 					) {
-					rsltSB.Append(' ');
+					wrSb.Append(' ');
 				}
-				if (rsltRightWst != WsType.Ortho && leftWst != WsType.Ortho && (rsltRightWst != WsType.Needs || leftWst != WsType.Needs)) {
-					rsltRightWst = WsType.Ortho;
+				if (true
+					&& wrRightmostWst != WsType.Ortho && leftWst != WsType.Ortho
+					&& (wrRightmostWst != WsType.Needs || leftWst != WsType.Needs)
+					) {
+					wrRightmostWst = WsType.Ortho;
 				}
-				rsltSB.Append(textHtml);
-				if ((int)rightWst > (int)rsltRightWst) {
-					rsltRightWst = rightWst;
+				wrSb.Append(text);
+				if ((int)rightWst > (int)wrRightmostWst) {
+					wrRightmostWst = rightWst;
 				}
 			}
-			public void Eof()
+			void WrEof()
 			{
-				Result = rsltSB.ToString();
-				rsltSB.Clear();
-				rsltSB = null;
+				Result = wrSb.ToString();
+				wrSb = null;
 			}
 			#endregion
 			#region Tags stack
-			int tagsPreDepth;
-			int tagsScriptDepth;
-			int tagsStyleDepth;
-			int tagsTextareaDepth;
-			void TagsNoteTag(Tag tag)
+			int tsPreDepth;
+			int tsScriptDepth;
+			int tsStyleDepth;
+			int tsTextareaDepth;
+			void TsNote(Tag tag)
 			{
-				if (!tag.IsValid || tag.IsSelfClosing) {
+				if (!tag.IsValid) {
 					return;
 				}
-				if (false) { }
-				else if (tag.NameExcSlash.EqualsIgnoreCase("pre")) {
-					tagsPreDepth = Math.Max(tagsPreDepth + (!tag.IsClosing ? 1 : -1), 0);
+				if (tag.NameExcSlash.EqualsIgnoreCase("pre")) {
+					tsPreDepth = Math.Max(0, tsPreDepth + (!tag.IsClosing ? 1 : -1));
 				}
 				else if (tag.NameExcSlash.EqualsIgnoreCase("script")) {
-					tagsScriptDepth = Math.Max(tagsScriptDepth + (!tag.IsClosing ? 1 : -1), 0);
+					tsScriptDepth = Math.Max(0, tsScriptDepth + (!tag.IsClosing ? 1 : -1));
 				}
 				else if (tag.NameExcSlash.EqualsIgnoreCase("style")) {
-					tagsStyleDepth = Math.Max(tagsStyleDepth + (!tag.IsClosing ? 1 : -1), 0);
+					tsStyleDepth = Math.Max(0, tsStyleDepth + (!tag.IsClosing ? 1 : -1));
 				}
 				else if (tag.NameExcSlash.EqualsIgnoreCase("textarea")) {
-					tagsTextareaDepth = Math.Max(tagsTextareaDepth + (!tag.IsClosing ? 1 : -1), 0);
+					tsTextareaDepth = Math.Max(0, tsTextareaDepth + (!tag.IsClosing ? 1 : -1));
 				}
+				Trace.Assert(tsScriptDepth + tsStyleDepth < 2);
 			}
-			bool TagsIsInScriptOrStyle()
+			bool TsIsInScriptOrStyle()
 			{
-				return tagsScriptDepth != 0 || tagsStyleDepth != 0;
+				return tsScriptDepth != 0 || tsStyleDepth != 0;
 			}
-			bool TagsIsTextNoTrim()
+			bool TsIsNoTrimText()
 			{
-				return tagsPreDepth != 0 || tagsTextareaDepth != 0;
+				return tsPreDepth != 0 || tsTextareaDepth != 0;
 			}
 			#endregion
 			#region Reader
-			public void Text(string textRaw)
+			Tag rdDeferredTag;
+			void RdFlushDeferredTag()
 			{
-				Trace.Assert(!TagsIsInScriptOrStyle());
+				if (rdDeferredTag != null) {
+					RdWriteTag(rdDeferredTag);
+					rdDeferredTag = null;
+				}
+			}
+			void HtmlTokenizer.IWriter.Text(string textRaw)
+			{
+				Trace.Assert(!TsIsInScriptOrStyle());
 				bool leftWsesTrimmed;
 				bool rightWsesTrimmed;
-				string textHtml = EncodeText(DecodeText(textRaw), encoding, !TagsIsTextNoTrim(), out leftWsesTrimmed, out rightWsesTrimmed);
-				Write(textHtml,
-					leftWsesTrimmed ? WsType.Trimmed : textHtml != "" && textHtml[0].IsHtmlWhiteSpace() ? WsType.Gives : textHtml != "" ? WsType.Needs : WsType.Ortho,
-					rightWsesTrimmed ? WsType.Trimmed : textHtml != "" && textHtml[textHtml.Length - 1].IsHtmlWhiteSpace() ? WsType.Gives : textHtml != "" ? WsType.Needs : WsType.Ortho);
+				var textHtml = EncodeText(DecodeText(textRaw), encoding, !TsIsNoTrimText(), out leftWsesTrimmed, out rightWsesTrimmed);
+				if (textHtml != "") {
+					RdFlushDeferredTag();
+				}
+				var leftWst = leftWsesTrimmed ? WsType.Trimmed : textHtml == "" ? WsType.Ortho : !textHtml[0].IsHtmlWhiteSpace() ? WsType.Needs : WsType.Gives;
+				var rightWst = rightWsesTrimmed ? WsType.Trimmed : textHtml == "" ? WsType.Ortho : !textHtml[textHtml.Length - 1].IsHtmlWhiteSpace() ? WsType.Needs : WsType.Gives;
+				WrWrite(textHtml, leftWst, rightWst);
 			}
-			public void Tag(string nameRaw, IEnumerable<HtmlTokenizer.Attr> attrsRaw)
+			void RdWriteTag(Tag tag)
 			{
-				Trace.Assert(!TagsIsInScriptOrStyle() || nameRaw.EqualsIgnoreCase("/script") || nameRaw.EqualsIgnoreCase("/style"));
-				Tag tag = DecodeTag(nameRaw, attrsRaw, true);
-				WsType leftWst = WsType.Ortho;
-				WsType rightWst = WsType.Ortho;
-				if (tag.IsValid) {
-					TagsNoteTag(tag);
+				WsType leftWst;
+				WsType rightWst;
+				if (tag.IsValid && (!tag.IsClosing || !tag.Flags.NoClosing())) {
+					leftWst = WsType.Ortho;
+					rightWst = WsType.Ortho;
 					if (!tag.Flags.IsOrthoWs()) {
-						bool isOpening = !tag.IsClosing;
-						bool isClosing = tag.IsClosing || tag.IsSelfClosing;
-						if (tag.Flags.GivesInnerWs() && !tag.IsSelfClosing) {
-							if (isOpening) { rightWst = WsType.Gives; }
-							if (isClosing) { leftWst = WsType.Gives; }
-						}
-						if (tag.Flags.GivesWs()) {
+						var isClosing = tag.IsClosing || tag.Flags.NoClosing();
+						var isOpening = !tag.IsClosing;
+						if (false
+							|| (tag.Flags.GivesInnerWs() && isClosing)
+							|| (tag.Flags.GivesOuterWs() && isOpening)
+							|| tag.Flags.GivesWs()
+							) {
 							leftWst = WsType.Gives;
+						}
+						if (false
+							|| (tag.Flags.GivesInnerWs() && isOpening)
+							|| (tag.Flags.GivesOuterWs() && isClosing)
+							|| tag.Flags.GivesWs()
+							) {
 							rightWst = WsType.Gives;
 						}
-						if (tag.Flags.NeedsOuterWs() || (tag.Flags.MayNeedOuterWs() && tag.Attrs.HasClassOrIdAttr())) {
-							if (isOpening) { leftWst = WsType.Needs; }
-							if (isClosing) { rightWst = WsType.Needs; }
-						}
-						if (tag.Flags.NeedsWs()) {
+						var needsWs = tag.Flags.NeedsWs() || (tag.Flags.MayNeedWs() && tag.Attrs.HasClassOrIdAttr());
+						if (false
+							|| (tag.Flags.NeedsInnerWs() && isClosing)
+							|| (tag.Flags.NeedsOuterWs() && isOpening)
+							|| needsWs
+							) {
 							leftWst = WsType.Needs;
+						}
+						if (false
+							|| (tag.Flags.NeedsInnerWs() && isOpening)
+							|| (tag.Flags.NeedsOuterWs() && isClosing)
+							|| needsWs
+							) {
 							rightWst = WsType.Needs;
 						}
 					}
 				}
-				Write(EncodeTag(tag, encoding), leftWst, rightWst);
+				else {
+					leftWst = WsType.Needs;
+					rightWst = WsType.Needs;
+				}
+				WrWrite(EncodeTag(tag, encoding), leftWst, rightWst);
 			}
-			public void Inlay(string textRaw, HtmlInlayType type)
+			void HtmlTokenizer.IWriter.Tag(string nameRaw, IEnumerable<HtmlTokenizer.Attr> attrsRaw)
 			{
-				Write(EncodeInlay(DecodeInlay(textRaw, type), encoding), WsType.Ortho, WsType.Ortho);
+				Trace.Assert(!TsIsInScriptOrStyle() || nameRaw.EqualsIgnoreCase("/script") || nameRaw.EqualsIgnoreCase("/style"));
+				var tag = DecodeTag(nameRaw, attrsRaw, true);
+				TsNote(tag);
+				if (rdDeferredTag != null && tag.IsValid && !tag.IsClosing && tag.NameExcSlash.EqualsIgnoreCase(rdDeferredTag.NameExcSlash)) {
+					rdDeferredTag = null;
+				}
+				RdFlushDeferredTag();
+				if (tag.IsValid && tag.Flags.OptClosing() && tag.IsClosing && tag.IsEmpty) {
+					rdDeferredTag = tag;
+					return;
+				}
+				RdWriteTag(tag);
+			}
+			void HtmlTokenizer.IWriter.Inlay(string textRaw, HtmlInlayType type)
+			{
+				RdFlushDeferredTag();
+				WrWrite(EncodeInlay(DecodeInlay(textRaw, type), encoding), WsType.Ortho, WsType.Ortho);
+			}
+			void HtmlTokenizer.IWriter.Eof()
+			{
+				RdFlushDeferredTag();
+				WrEof();
 			}
 			#endregion
 			internal static string Run(string htmlText, Encoding encoding)
 			{
-				var wkr = new HtmlMinifierWkr(encoding);
-				HtmlTokenizer.Tokenize(htmlText, wkr);
-				return wkr.Result;
+				var worker = new HtmlMinifierWorker(encoding);
+				HtmlTokenizer.Tokenize(htmlText, worker);
+				return worker.Result;
 			}
 		}
 		public static string Minify(string htmlText, Encoding encoding)
 		{
-			return HtmlMinifierWkr.Run(htmlText, encoding);
-		}
-		public static string Minify(string htmlText)
-		{
-			return Minify(htmlText, Encoding.UTF8);
+			return HtmlMinifierWorker.Run(htmlText, encoding);
 		}
 	}
 }

@@ -7,23 +7,22 @@ namespace SplHtmlMinifier.Mvc
 {
 	public class HtmlMinifyAttribute : ActionFilterAttribute
 	{
-		class HtmlMinifyFilterStream : Stream
+		class MinifyFilterStream : Stream
 		{
-			HttpResponseBase response;
-			Stream innerFilter;
-			MemoryStream memoryStream;
-			public HtmlMinifyFilterStream(HttpResponseBase response, Stream innerFilter)
+			readonly HttpResponseBase response;
+			readonly Stream innerFilter;
+			readonly MemoryStream memoryStream = new MemoryStream();
+			public MinifyFilterStream(HttpResponseBase response, Stream innerFilter)
 			{
 				this.response = response;
 				this.innerFilter = innerFilter;
-				memoryStream = new MemoryStream();
 			}
-			#region Not implemented
-			public override long Length { get { throw new NotImplementedException(); } }
-			public override long Position { get { throw new NotImplementedException(); } set { throw new NotImplementedException(); } }
-			public override int Read(byte[] buffer, int offset, int count) { throw new NotImplementedException(); }
-			public override long Seek(long offset, SeekOrigin origin) { throw new NotImplementedException(); }
-			public override void SetLength(long value) { throw new NotImplementedException(); }
+			#region Not supported
+			public override long Length { get { throw new NotSupportedException(); } }
+			public override long Position { get { throw new NotSupportedException(); } set { throw new NotSupportedException(); } }
+			public override int Read(byte[] buffer, int offset, int count) { throw new NotSupportedException(); }
+			public override long Seek(long offset, SeekOrigin origin) { throw new NotSupportedException(); }
+			public override void SetLength(long value) { throw new NotSupportedException(); }
 			#endregion
 			public override bool CanWrite { get { return true; } }
 			public override bool CanSeek { get { return false; } }
@@ -39,15 +38,17 @@ namespace SplHtmlMinifier.Mvc
 				}
 				try {
 					if (response.ContentType.Equals("text/html", StringComparison.OrdinalIgnoreCase)) {
-						string htmlText = response.ContentEncoding.GetString(memoryStream.ToArray());
+						var encoding = response.ContentEncoding;
+						var htmlText = encoding.GetString(memoryStream.ToArray());
 						memoryStream.SetLength(0);
-						htmlText = HtmlMinifier.Minify(htmlText, response.ContentEncoding);
-						byte[] bytes = response.ContentEncoding.GetBytes(htmlText);
+						htmlText = HtmlMinifier.Minify(htmlText, encoding);
+						var bytes = encoding.GetBytes(htmlText);
 						innerFilter.Write(bytes, 0, bytes.Length);
 					}
 					else {
 						memoryStream.Position = 0;
 						memoryStream.CopyTo(innerFilter);
+						memoryStream.SetLength(0);
 					}
 				}
 				finally {
@@ -63,7 +64,7 @@ namespace SplHtmlMinifier.Mvc
 		{
 			var response = filterContext.HttpContext.Response;
 			if (response.ContentType.Equals("text/html", StringComparison.OrdinalIgnoreCase)) {
-				response.Filter = new HtmlMinifyFilterStream(response, response.Filter);
+				response.Filter = new MinifyFilterStream(response, response.Filter);
 			}
 		}
 	}

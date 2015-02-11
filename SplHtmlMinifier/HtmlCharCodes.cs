@@ -261,11 +261,11 @@ namespace SplHtmlMinifier
 			{ "permil", 8240 },
 			{ "lsaquo", 8249 },
 			{ "rsaquo", 8250 },
-			{ "euro", 8364 },
+			{ "euro", 8364 }
 			#endregion
 		});
 		public static IReadOnlyDictionary<string, int> CharNameToCode { get { return charNameToCode; } }
-		static IReadOnlyDictionary<int, string> codeToCharName = null;
+		static IReadOnlyDictionary<int, string> codeToCharName;
 		public static IReadOnlyDictionary<int, string> CodeToCharName
 		{
 			get

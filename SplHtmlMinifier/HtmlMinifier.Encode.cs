@@ -9,45 +9,39 @@ namespace SplHtmlMinifier
 		{
 			return HtmlCharCoding.Encode(text.Val, encoding, '<', trimWses, out leftWsesTrimmed, out rightWsesTrimmed);
 		}
-		static bool HasHtmlWhiteSpaceOrGt(this string name)
+		static bool HasHtmlWhiteSpaceOrGt(this string text)
 		{
-			foreach (var chr in name) {
-				if (chr.IsHtmlWhiteSpace() || chr == '>') {
-					return true;
-				}
-			}
-			return false;
+			return text.Any(chr => chr.IsHtmlWhiteSpace() || chr == '>');
 		}
 		static string EncodeTag(Tag tag, Encoding encoding)
 		{
 			var sb = new StringBuilder();
-			bool padNextAttr = false;
+			var padAttr = false;
 			foreach (var attr in tag.Attrs) {
-				if (padNextAttr) {
-					padNextAttr = false;
+				if (padAttr) {
+					padAttr = false;
 					sb.Append(' ');
 				}
-				sb.Append(attr.Name);
-				padNextAttr = true;
 				if (attr.Val == null) {
+					sb.Append(attr.Name);
+					padAttr = true;
 					continue;
 				}
 				bool leftWsesTrimmed;
 				bool rightWsesTrimmed;
 				if (attr.Val != "" && attr.Val[0] != '"' && attr.Val[0] != '\'' && !attr.Val.HasHtmlWhiteSpaceOrGt()) {
-					sb.AppendFormat("={0}", HtmlCharCoding.Encode(attr.Val, encoding, '>', false, out leftWsesTrimmed, out rightWsesTrimmed));
+					sb.AppendFormat("{0}={1}", attr.Name, HtmlCharCoding.Encode(attr.Val, encoding, '>', false, out leftWsesTrimmed, out rightWsesTrimmed));
+					padAttr = true;
 					continue;
 				}
-				string attrValHtml = (new string[] {
+				sb.AppendFormat("{0}={1}", attr.Name, (new[] {
 					string.Format("\"{0}\"", HtmlCharCoding.Encode(attr.Val, encoding, '"', false, out leftWsesTrimmed, out rightWsesTrimmed)),
-					attr.Val.IndexOf('"') >= 0 ? string.Format("'{0}'", HtmlCharCoding.Encode(attr.Val, encoding, '\'', false, out leftWsesTrimmed, out rightWsesTrimmed)) : null,
+					attr.Val.IndexOf('"') >= 0 ? string.Format("'{0}'", HtmlCharCoding.Encode(attr.Val, encoding, '\'', false, out leftWsesTrimmed, out rightWsesTrimmed)) : null
 					})
-					.Where(x => x != null).OrderBy(x => x.Length).First();
-				sb.AppendFormat("={0}", attrValHtml);
-				padNextAttr = false;
+					.Where(x => x != null).OrderBy(x => x.Length).First());
+				padAttr = false;
 			}
-			string attrsHtml = sb.ToString();
-			sb.Clear();
+			var attrsHtml = sb.ToString();
 			return string.Format("<{0}{1}{2}>", tag.Name, attrsHtml != "" && attrsHtml != "/" ? " " : "", attrsHtml);
 		}
 		static string EncodeInlay(Inlay inlay, Encoding encoding)

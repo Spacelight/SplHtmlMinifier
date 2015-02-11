@@ -6,8 +6,7 @@ namespace SplHtmlMinifier
 {
 	public static class HtmlAttrs
 	{
-		static readonly IReadOnlyDictionary<string, bool> attrNames =
-			new ReadOnlyDictionary<string, bool>(new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase)
+		static readonly IReadOnlyDictionary<string, bool> attrNames = new ReadOnlyDictionary<string, bool>(new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase)
 		{
 			#region Names
 			// From http://www.w3.org/TR/html401/index/attributes.html
@@ -129,7 +128,7 @@ namespace SplHtmlMinifier
 			{ "version", true },
 			{ "vlink", true },
 			{ "vspace", true },
-			{ "width", true },
+			{ "width", true }
 			#endregion
 		});
 		public static IReadOnlyDictionary<string, bool> AttrNames { get { return attrNames; } }

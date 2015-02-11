@@ -28,8 +28,8 @@ namespace SplHtmlMinifier
 			var r = new CharReader(textHtml);
 			textHtml = null;
 			var sb = new StringBuilder();
-			int escBeginIx = -1;
-			int escCode = -1;
+			var escIx = -1;
+			var escCode = -1;
 			r.Read();
 		textCur: ;
 			if (!r.IsEof && r.Chr != '&') {
@@ -40,21 +40,19 @@ namespace SplHtmlMinifier
 			if (r.IsEof) {
 				goto eofCur;
 			}
-			escBeginIx = r.Ix;
+			escIx = r.Ix;
 			r.Read();
-			goto escCur;
-		escCur: ;
 			if (r.Chr.IsHtmlEscLit()) {
 				goto escLitCur;
 			}
-			if (r.IsEof || r.Chr != '#') {
+			if (r.Chr != '#') {
 				goto escDoneCur;
 			}
 			r.Read();
 			if (r.Chr.IsHtmlEscNum()) {
 				goto escNumCur;
 			}
-			if (r.IsEof || (r.Chr != 'X' && r.Chr != 'x')) {
+			if (r.Chr != 'X' && r.Chr != 'x') {
 				goto escDoneCur;
 			}
 			r.Read();
@@ -67,7 +65,7 @@ namespace SplHtmlMinifier
 				r.Read();
 				goto escLitCur;
 			}
-			string escLit = r.Text.Substring(escBeginIx + 1, r.Ix - (escBeginIx + 1));
+			var escLit = r.Text.Substring(escIx + 1, r.Ix - (escIx + 1));
 			if (!HtmlCharCodes.CharNameToCode.TryGetValue(escLit, out escCode)) {
 				escCode = -1;
 			}
@@ -77,8 +75,8 @@ namespace SplHtmlMinifier
 				r.Read();
 				goto escNumCur;
 			}
-			string escNum = r.Text.Substring(escBeginIx + 2, r.Ix - (escBeginIx + 2));
-			if (!int.TryParse(escNum, out escCode) || escCode > 0xFFFD) {
+			var escNum = r.Text.Substring(escIx + 2, r.Ix - (escIx + 2));
+			if (!int.TryParse(escNum, NumberStyles.Integer, CultureInfo.InvariantCulture, out escCode) || escCode > 0xFFFD) {
 				escCode = 0xFFFD;
 			}
 			goto escDoneCur;
@@ -87,11 +85,10 @@ namespace SplHtmlMinifier
 				r.Read();
 				goto escHexCur;
 			}
-			string escHex = r.Text.Substring(escBeginIx + 3, r.Ix - (escBeginIx + 3));
-			if (!int.TryParse(escHex, NumberStyles.HexNumber, null, out escCode) || escCode > 0xFFFD) {
+			var escHex = r.Text.Substring(escIx + 3, r.Ix - (escIx + 3));
+			if (!int.TryParse(escHex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out escCode) || escCode > 0xFFFD) {
 				escCode = 0xFFFD;
 			}
-			goto escDoneCur;
 		escDoneCur: ;
 			if (escCode >= 0) {
 				sb.Append((char)escCode);
@@ -99,10 +96,11 @@ namespace SplHtmlMinifier
 				if (r.Chr == ';') {
 					r.Read();
 				}
-				escBeginIx = -1;
+				escIx = -1;
 			}
-			if (escBeginIx >= 0) {
-				sb.Append(r.Text, escBeginIx, r.Ix - escBeginIx);
+			if (escIx >= 0) {
+				sb.Append(r.Text, escIx, r.Ix - escIx);
+				escIx = -1;
 			}
 			goto textCur;
 		eofCur: ;

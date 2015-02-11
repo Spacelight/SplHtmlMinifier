@@ -8,20 +8,18 @@ namespace SplHtmlMinifier
 	{
 		Comments,
 		Script,
-		Style,
+		Style
 	}
 	public static class HtmlTokenizer
 	{
 		public class Attr
 		{
-			readonly string name;
-			readonly string val;
-			public string Name { get { return name; } }
-			public string Val { get { return val; } }
+			public string Name { get; private set; }
+			public string Val { get; private set; }
 			public Attr(string name, string val)
 			{
-				this.name = name;
-				this.val = val;
+				Name = name;
+				Val = val;
 			}
 		}
 		public interface IWriter
@@ -48,7 +46,7 @@ namespace SplHtmlMinifier
 			var r = new CharReader(htmlText);
 			htmlText = null;
 			var sb = new StringBuilder();
-			int lastTagBeginIx = -1;
+			var lastTagIx = -1;
 			string tagName = null;
 			string attrName = null;
 			var attrs = new List<Attr>();
@@ -61,16 +59,15 @@ namespace SplHtmlMinifier
 				goto textCur;
 			}
 			if (sb.Length != 0) {
-				string text = sb.ToString();
+				var text = sb.ToString();
 				sb.Clear();
 				w.Text(text);
 			}
 			if (r.IsEof) {
 				goto eofCur;
 			}
-			lastTagBeginIx = r.Ix;
+			lastTagIx = r.Ix;
 			r.Read();
-			goto tagNameCur;
 		tagNameCur: ;
 			if (!r.IsEof && !r.Chr.IsHtmlWhiteSpace() && r.Chr != '>' && (r.Chr != '/' || r.Peek() != '>')) {
 				sb.Append(r.Chr);
@@ -79,32 +76,31 @@ namespace SplHtmlMinifier
 			}
 			tagName = sb.ToString();
 			sb.Clear();
-			if (tagName.StartsWith("!--")) {
+			if (tagName.StartsWith("!--", StringComparison.Ordinal)) {
 				tagName = null;
 				goto commentsCur;
 			}
-			goto tagBodyCur;
 		tagBodyCur: ;
 			if (r.Chr.IsHtmlWhiteSpace()) {
 				r.Read();
 				goto tagBodyCur;
 			}
-			if (attrName != null && r.Chr != '=') {
+			if (attrName != null && (r.Chr != '=' || attrName == "/")) {
 				attrs.Add(new Attr(attrName, null));
 				attrName = null;
 			}
 			if (r.IsEof || r.Chr == '>') {
 				w.Tag(tagName, attrs.AsReadOnly());
 				attrs.Clear();
-				string tagNameSaved = tagName;
+				var tagNameSaved = tagName;
 				tagName = null;
 				if (r.IsEof) {
 					goto eofCur;
 				}
 				r.Read();
-				if (tagNameSaved.EqualsIgnoreCase("script") || tagNameSaved.EqualsIgnoreCase("style")) {
-					int inlayBeginIx = r.Ix;
-					int inlayEndIx = r.Text.IndexOf(string.Format("</{0}>", tagNameSaved), inlayBeginIx, StringComparison.OrdinalIgnoreCase);
+				if (!r.IsEof && (tagNameSaved.EqualsIgnoreCase("script") || tagNameSaved.EqualsIgnoreCase("style"))) {
+					var inlayBeginIx = r.Ix;
+					var inlayEndIx = r.Text.IndexOf(string.Format("</{0}>", tagNameSaved), inlayBeginIx, StringComparison.OrdinalIgnoreCase);
 					inlayEndIx = inlayEndIx >= 0 ? inlayEndIx : r.Text.Length;
 					r.SkipTo(inlayEndIx);
 					w.Inlay(r.Text.Substring(inlayBeginIx, inlayEndIx - inlayBeginIx), tagNameSaved.EqualsIgnoreCase("script") ? HtmlInlayType.Script : HtmlInlayType.Style);
@@ -120,7 +116,9 @@ namespace SplHtmlMinifier
 			if (!r.IsEof && !r.Chr.IsHtmlWhiteSpace() && r.Chr != '>' && r.Chr != '=') {
 				sb.Append(r.Chr);
 				r.Read();
-				goto attrNameCur;
+				if (r.Chr != '/' || sb.Length != 1) {
+					goto attrNameCur;
+				}
 			}
 			attrName = sb.ToString();
 			sb.Clear();
@@ -137,9 +135,8 @@ namespace SplHtmlMinifier
 			else {
 				attrValQuotes = '\0';
 			}
-			goto attrValCur;
 		attrValCur: ;
-			if (!r.IsEof && (attrValQuotes == '\0' ? !r.Chr.IsHtmlWhiteSpace() && r.Chr != '>' : r.Chr != attrValQuotes)) {
+			if (!r.IsEof && (attrValQuotes != '\0' ? r.Chr != attrValQuotes : !r.Chr.IsHtmlWhiteSpace() && r.Chr != '>')) {
 				sb.Append(r.Chr);
 				r.Read();
 				goto attrValCur;
@@ -147,23 +144,23 @@ namespace SplHtmlMinifier
 			if (!r.IsEof && attrValQuotes != '\0') {
 				r.Read();
 			}
-			string attrVal;
-			attrVal = sb.ToString();
+			var attrVal = sb.ToString();
 			sb.Clear();
 			attrs.Add(new Attr(attrName, attrVal));
 			attrName = null;
 			goto tagBodyCur;
 		commentsCur: ;
-			int commentsBeginIx = lastTagBeginIx;
-			int commentsEndIx = r.Text.IndexOf("-->", commentsBeginIx + 3);
+			var commentsBeginIx = lastTagIx;
+			var commentsEndIx = r.Text.IndexOf("-->", commentsBeginIx + 4, StringComparison.Ordinal);
 			commentsEndIx = commentsEndIx >= 0 ? commentsEndIx + 3 : r.Text.Length;
-			r.SkipTo(commentsEndIx);
+			if (!r.IsEof) {
+				r.SkipTo(commentsEndIx);
+			}
 			w.Inlay(r.Text.Substring(commentsBeginIx, commentsEndIx - commentsBeginIx), HtmlInlayType.Comments);
 			goto textCur;
 		eofCur: ;
 			r = null;
 			w.Eof();
-			return;
 		}
 	}
 }

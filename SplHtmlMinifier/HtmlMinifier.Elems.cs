@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace SplHtmlMinifier
 {
@@ -6,56 +7,48 @@ namespace SplHtmlMinifier
 	{
 		public class Text
 		{
-			readonly string val;
-			public string Val { get { return val; } }
+			public string Val { get; private set; }
 			public Text(string val)
 			{
-				this.val = val;
+				Val = val;
 			}
 		}
 		public class Attr
 		{
-			readonly bool isValid;
-			readonly string name;
-			readonly string val;
-			public bool IsValid { get { return isValid; } }
-			public string Name { get { return name; } }
-			public string Val { get { return val; } }
+			public bool IsValid { get; private set; }
+			public string Name { get; private set; }
+			public string Val { get; private set; }
 			public Attr(bool isValid, string name, string val)
 			{
-				this.isValid = isValid;
-				this.name = name;
-				this.val = val;
+				IsValid = isValid;
+				Name = name;
+				Val = val;
 			}
+			public bool IsSlash { get { return Name == "/" && Val == null; } }
 		}
 		public class Tag
 		{
-			readonly bool isValid;
-			readonly string name;
-			readonly HtmlTagFlags flags;
-			readonly IList<Attr> attrs;
-			readonly bool isSelfClosing;
-			public bool IsValid { get { return isValid; } }
-			public string Name { get { return name; } }
-			public HtmlTagFlags Flags { get { return flags; } }
-			public IList<Attr> Attrs { get { return attrs; } }
-			public bool IsSelfClosing { get { return isSelfClosing; } }
-			public Tag(bool isValid, string name, HtmlTagFlags flags, IList<Attr> attrs, bool isSelfClosing)
+			public bool IsValid { get; private set; }
+			public string Name { get; private set; }
+			public HtmlTagFlags Flags { get; private set; }
+			public IList<Attr> Attrs { get; private set; }
+			public Tag(bool isValid, string name, HtmlTagFlags flags, IList<Attr> attrs)
 			{
-				this.isValid = isValid;
-				this.name = name;
-				this.flags = flags;
-				this.attrs = attrs;
-				this.isSelfClosing = isSelfClosing;
+				IsValid = isValid;
+				Name = name;
+				Flags = flags;
+				Attrs = attrs;
 			}
 			bool? isClosing;
 			string nameExcSlash;
+			bool? isSelfClosing;
+			bool? isEmpty;
 			public bool IsClosing
 			{
 				get
 				{
 					if (isClosing == null) {
-						isClosing = name.StartsWith("/");
+						isClosing = Name.StartsWith("/", StringComparison.Ordinal);
 					}
 					return (bool)isClosing;
 				}
@@ -65,22 +58,40 @@ namespace SplHtmlMinifier
 				get
 				{
 					if (nameExcSlash == null) {
-						nameExcSlash = !name.StartsWith("/") ? name : name.Substring(1);
+						nameExcSlash = !Name.StartsWith("/", StringComparison.Ordinal) ? Name : Name.Substring(1);
 					}
 					return nameExcSlash;
+				}
+			}
+			public bool IsSelfClosing
+			{
+				get
+				{
+					if (isSelfClosing == null) {
+						isSelfClosing = !Name.StartsWith("/", StringComparison.Ordinal) && (Flags.NoClosing() || (Attrs.Count != 0 && Attrs[Attrs.Count - 1].IsSlash));
+					}
+					return (bool)isSelfClosing;
+				}
+			}
+			public bool IsEmpty
+			{
+				get
+				{
+					if (isEmpty == null) {
+						isEmpty = Attrs.Count == 0 || (Attrs.Count == 1 || Attrs[0].IsSlash);
+					}
+					return (bool)isEmpty;
 				}
 			}
 		}
 		public class Inlay
 		{
-			readonly string val;
-			readonly HtmlInlayType type;
-			public string Val { get { return val; } }
-			public HtmlInlayType Type { get { return type; } }
+			public string Val { get; private set; }
+			public HtmlInlayType Type { get; private set; }
 			public Inlay(string val, HtmlInlayType type)
 			{
-				this.val = val;
-				this.type = type;
+				Val = val;
+				Type = type;
 			}
 		}
 	}
