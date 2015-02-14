@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace SplHtmlMinifier
 {
@@ -90,22 +91,10 @@ namespace SplHtmlMinifier
 				attrName = null;
 			}
 			if (r.IsEof || r.Chr == '>') {
-				w.Tag(tagName, attrs.AsReadOnly());
-				attrs.Clear();
-				var tagNameSaved = tagName;
-				tagName = null;
-				if (r.IsEof) {
-					goto eofCur;
+				if (r.Chr == '>') {
+					r.Read();
 				}
-				r.Read();
-				if (!r.IsEof && (tagNameSaved.EqualsIgnoreCase("script") || tagNameSaved.EqualsIgnoreCase("style"))) {
-					var inlayBeginIx = r.Ix;
-					var inlayEndIx = r.Text.IndexOf(string.Format("</{0}>", tagNameSaved), inlayBeginIx, StringComparison.OrdinalIgnoreCase);
-					inlayEndIx = inlayEndIx >= 0 ? inlayEndIx : r.Text.Length;
-					r.SkipTo(inlayEndIx);
-					w.Inlay(r.Text.Substring(inlayBeginIx, inlayEndIx - inlayBeginIx), tagNameSaved.EqualsIgnoreCase("script") ? HtmlInlayType.Script : HtmlInlayType.Style);
-				}
-				goto textCur;
+				goto tagDoneCur;
 			}
 			if (attrName == null) {
 				goto attrNameCur;
@@ -113,12 +102,10 @@ namespace SplHtmlMinifier
 			r.Read();
 			goto attrPreValCur;
 		attrNameCur: ;
-			if (!r.IsEof && !r.Chr.IsHtmlWhiteSpace() && r.Chr != '>' && r.Chr != '=') {
+			if (!r.IsEof && !r.Chr.IsHtmlWhiteSpace() && r.Chr != '>' && (r.Chr != '/' || sb.Length == 0) && r.Chr != '=') {
 				sb.Append(r.Chr);
 				r.Read();
-				if (r.Chr != '/' || sb.Length != 1) {
-					goto attrNameCur;
-				}
+				goto attrNameCur;
 			}
 			attrName = sb.ToString();
 			sb.Clear();
@@ -149,6 +136,31 @@ namespace SplHtmlMinifier
 			attrs.Add(new Attr(attrName, attrVal));
 			attrName = null;
 			goto tagBodyCur;
+		tagDoneCur: ;
+			w.Tag(tagName, attrs.AsReadOnly());
+			attrs.Clear();
+			var tagNameSaved = tagName;
+			tagName = null;
+			if (r.IsEof || (true
+				&& !tagNameSaved.EqualsIgnoreCase("script") && !tagNameSaved.EqualsIgnoreCase("style")
+				&& !tagNameSaved.EqualsIgnoreCase("iframe") && !tagNameSaved.EqualsIgnoreCase("textarea") && !tagNameSaved.EqualsIgnoreCase("title")
+				)) {
+				goto textCur;
+			}
+			var fragmBeginIx = r.Ix;
+			var m = new Regex(string.Format(@"</{0}\b", tagNameSaved), RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Singleline).Match(r.Text, fragmBeginIx);
+			var fragmEndIx = m.Success ? m.Index : r.Text.Length;
+			if (fragmEndIx == fragmBeginIx) {
+				goto textCur;
+			}
+			r.SkipTo(fragmEndIx);
+			if (tagNameSaved.EqualsIgnoreCase("script") || tagNameSaved.EqualsIgnoreCase("style")) {
+				w.Inlay(r.Text.Substring(fragmBeginIx, fragmEndIx - fragmBeginIx), tagNameSaved.EqualsIgnoreCase("script") ? HtmlInlayType.Script : HtmlInlayType.Style);
+			}
+			else {
+				w.Text(r.Text.Substring(fragmBeginIx, fragmEndIx - fragmBeginIx));
+			}
+			goto textCur;
 		commentsCur: ;
 			var commentsBeginIx = lastTagIx;
 			var commentsEndIx = r.Text.IndexOf("-->", commentsBeginIx + 4, StringComparison.Ordinal);

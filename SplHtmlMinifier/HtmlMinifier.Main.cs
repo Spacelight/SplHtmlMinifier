@@ -125,14 +125,14 @@ namespace SplHtmlMinifier
 						var isClosing = tag.IsClosing || tag.Flags.NoClosing();
 						var isOpening = !tag.IsClosing;
 						if (false
-							|| (tag.Flags.GivesInnerWs() && isClosing)
+							|| (tag.Flags.GivesInnerWs() && isClosing && !isOpening)
 							|| (tag.Flags.GivesOuterWs() && isOpening)
 							|| tag.Flags.GivesWs()
 							) {
 							leftWst = WsType.Gives;
 						}
 						if (false
-							|| (tag.Flags.GivesInnerWs() && isOpening)
+							|| (tag.Flags.GivesInnerWs() && isOpening && !isClosing)
 							|| (tag.Flags.GivesOuterWs() && isClosing)
 							|| tag.Flags.GivesWs()
 							) {
@@ -140,14 +140,14 @@ namespace SplHtmlMinifier
 						}
 						var needsWs = tag.Flags.NeedsWs() || (tag.Flags.MayNeedWs() && tag.Attrs.HasClassOrIdAttr());
 						if (false
-							|| (tag.Flags.NeedsInnerWs() && isClosing)
+							|| (tag.Flags.NeedsInnerWs() && isClosing && !isOpening)
 							|| (tag.Flags.NeedsOuterWs() && isOpening)
 							|| needsWs
 							) {
 							leftWst = WsType.Needs;
 						}
 						if (false
-							|| (tag.Flags.NeedsInnerWs() && isOpening)
+							|| (tag.Flags.NeedsInnerWs() && isOpening && !isClosing)
 							|| (tag.Flags.NeedsOuterWs() && isClosing)
 							|| needsWs
 							) {

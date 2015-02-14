@@ -41,7 +41,6 @@ namespace SplHtmlMinifier
 			}
 			bool? isClosing;
 			string nameExcSlash;
-			bool? isSelfClosing;
 			bool? isEmpty;
 			public bool IsClosing
 			{
@@ -63,22 +62,12 @@ namespace SplHtmlMinifier
 					return nameExcSlash;
 				}
 			}
-			public bool IsSelfClosing
-			{
-				get
-				{
-					if (isSelfClosing == null) {
-						isSelfClosing = !Name.StartsWith("/", StringComparison.Ordinal) && (Flags.NoClosing() || (Attrs.Count != 0 && Attrs[Attrs.Count - 1].IsSlash));
-					}
-					return (bool)isSelfClosing;
-				}
-			}
 			public bool IsEmpty
 			{
 				get
 				{
 					if (isEmpty == null) {
-						isEmpty = Attrs.Count == 0 || (Attrs.Count == 1 || Attrs[0].IsSlash);
+						isEmpty = Attrs.Count == 0 || (Attrs.Count == 1 && Attrs[0].IsSlash);
 					}
 					return (bool)isEmpty;
 				}

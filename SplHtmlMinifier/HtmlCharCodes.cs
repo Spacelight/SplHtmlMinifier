@@ -265,15 +265,15 @@ namespace SplHtmlMinifier
 			#endregion
 		});
 		public static IReadOnlyDictionary<string, int> CharNameToCode { get { return charNameToCode; } }
-		static IReadOnlyDictionary<int, string> codeToCharName;
-		public static IReadOnlyDictionary<int, string> CodeToCharName
+		static IReadOnlyDictionary<int, string> charCodeToName;
+		public static IReadOnlyDictionary<int, string> CharCodeToName
 		{
 			get
 			{
-				if (codeToCharName == null) {
-					codeToCharName = new ReadOnlyDictionary<int, string>(charNameToCode.ToDictionary(pair => pair.Value, pair => pair.Key));
+				if (charCodeToName == null) {
+					charCodeToName = new ReadOnlyDictionary<int, string>(charNameToCode.ToDictionary(pair => pair.Value, pair => pair.Key));
 				}
-				return codeToCharName;
+				return charCodeToName;
 			}
 		}
 	}

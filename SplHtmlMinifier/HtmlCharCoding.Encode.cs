@@ -35,7 +35,7 @@ namespace SplHtmlMinifier
 		static string HtmlEscAsLit(this char chr)
 		{
 			string name;
-			if (HtmlCharCodes.CodeToCharName.TryGetValue(chr, out name)) {
+			if (HtmlCharCodes.CharCodeToName.TryGetValue(chr, out name)) {
 				return name;
 			}
 			return null;
@@ -57,7 +57,7 @@ namespace SplHtmlMinifier
 			leftWsesTrimmed = false;
 			rightWsesTrimmed = false;
 			var sb = new StringBuilder();
-			var isLeftmostNonWs = false;
+			var isMetNonWs = false;
 			var isWsDeferred = false;
 			while (true) {
 				r.Read();
@@ -70,8 +70,8 @@ namespace SplHtmlMinifier
 					isWsDeferred = true;
 					continue;
 				}
-				if (!isLeftmostNonWs) {
-					isLeftmostNonWs = true;
+				if (!isMetNonWs) {
+					isMetNonWs = true;
 					leftWsesTrimmed = isWsDeferred;
 					isWsDeferred = false;
 				}
