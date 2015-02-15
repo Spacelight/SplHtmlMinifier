@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -8,6 +9,7 @@ namespace SplHtmlMinifier
 	public enum HtmlInlayType
 	{
 		Comments,
+		Doctype,
 		Script,
 		Style
 	}
@@ -81,6 +83,10 @@ namespace SplHtmlMinifier
 				tagName = null;
 				goto commentsCur;
 			}
+			if (tagName == "!DOCTYPE") {
+				tagName = null;
+				goto doctypeCur;
+			}
 		tagBodyCur: ;
 			if (r.Chr.IsHtmlWhiteSpace()) {
 				r.Read();
@@ -148,7 +154,8 @@ namespace SplHtmlMinifier
 				goto textCur;
 			}
 			var fragmBeginIx = r.Ix;
-			var m = new Regex(string.Format(@"</{0}\b", tagNameSaved), RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Singleline).Match(r.Text, fragmBeginIx);
+			var m = new Regex(string.Format(@"</{0}\b", tagNameSaved), RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Singleline)
+				.Match(r.Text, fragmBeginIx);
 			var fragmEndIx = m.Success ? m.Index : r.Text.Length;
 			if (fragmEndIx == fragmBeginIx) {
 				goto textCur;
@@ -169,6 +176,17 @@ namespace SplHtmlMinifier
 				r.SkipTo(commentsEndIx);
 			}
 			w.Inlay(r.Text.Substring(commentsBeginIx, commentsEndIx - commentsBeginIx), HtmlInlayType.Comments);
+			goto textCur;
+		doctypeCur: ;
+			var doctypeBeginIx = lastTagIx;
+			m = new Regex(@"<!DOCTYPE\s*(([^\s""'>]+|""[^""]*(""|$)|'[^']*('|$))\s*)*(>|$)", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Singleline)
+				.Match(r.Text, doctypeBeginIx);
+			Trace.Assert(m.Success);
+			var doctypeEndIx = m.Index + m.Length;
+			if (!r.IsEof) {
+				r.SkipTo(doctypeEndIx);
+			}
+			w.Inlay(r.Text.Substring(doctypeBeginIx, doctypeEndIx - doctypeBeginIx), HtmlInlayType.Doctype);
 			goto textCur;
 		eofCur: ;
 			r = null;
