@@ -8,7 +8,7 @@ Tested mostly visually & some cleanups
 
 ### Pros:
 * Almost no regexes - parsing is fast
-* At most 2 parsed HTML tags kept live in heap - means tiny memory footprint
+* At most 2 parsed HTML tags kept live in heap - tiny memory footprint
 
 ### Cons:
 * Doesn't touch JS or CSS
