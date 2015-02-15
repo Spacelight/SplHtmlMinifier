@@ -14,7 +14,7 @@ Tested mostly visually & some cleanups
 * Doesn't touch JS or CSS
 * No settings
 * Needs more testing
-----------------------------------------
+
 ## Changes
 
 * 0.2 Version
